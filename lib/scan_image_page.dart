@@ -22,7 +22,7 @@ class ScanImagePage extends StatelessWidget {
 class ScanCard extends StatefulWidget {
   TextEditingController _controller = TextEditingController();
 
-  WebSocketChannel channel = WebSocketChannel.connect(Uri.parse("ws://localhost:49875"));
+  WebSocketChannel channel = WebSocketChannel.connect(Uri.parse("ws://localhost:49985"));
 
   ScanCard({Key? key}) : super(key: key);
 
