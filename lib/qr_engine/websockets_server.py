@@ -3,16 +3,25 @@
 import asyncio
 import websockets
 import qr_reader
+import json
 
 
-async def echo(websocket, path):
+async def echo(websocket):
     print("started server")
     async for message in websocket:
-        await websocket.send(message)
-        print(message)
+        await websocket.send("Server Connection Successful")
+        data = json.loads(message)
 
-        if message == "scan_and_sort":
-            qr_reader.add_filenames_to_excel()
+
+        if data['command'] == "scan_and_sort":
+            await websocket.send("Scanning images...")
+            qr_reader.add_filenames_to_excel(input_path=data['inputPath'],
+                                             output_path=data['outputPath'],
+                                             excel_path=data['excelPath'])
+            await websocket.send("File locations: \n"
+                                 f"Input: {data['inputPath']} \n"
+                                 f"Output: {data['outputPath']} \n"
+                                 f"Excel file: {data['excelPath']}")
 
 
 start_server = websockets.serve(echo, "0.0.0.0", 49985)  # 56095)
