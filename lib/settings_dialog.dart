@@ -276,6 +276,7 @@ Future<void> settingsDialog(context) async {
                                 Navigator.of(context, rootNavigator: true)
                                     .pop("dialog");
                               },
+                              backgroundColor: Colors.grey,
                               label: const Text("Cancel")),
                         ),
                         Padding(
@@ -292,6 +293,7 @@ Future<void> settingsDialog(context) async {
 
                                 // TODO add toast popup saying successfully saved
                               },
+                              backgroundColor: const Color(0xffFCCFA8),
                               label: const Text("Save")),
                         )
                       ],
