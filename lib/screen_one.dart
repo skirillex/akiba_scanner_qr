@@ -1,7 +1,10 @@
 import 'package:akiba_scanner_qr/generate_qr_page.dart';
 import 'package:akiba_scanner_qr/scan_image_page.dart';
+import 'package:akiba_scanner_qr/settings_dialog.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
 
 class ScreenOne extends StatefulWidget {
   ScreenOne({Key? key}) : super(key: key);
@@ -44,7 +47,9 @@ class _ScreenOneState extends State<ScreenOne> {
                   child: IconButton(
                     icon: const Icon(Icons.tune),
                     color: const Color(0xffFCCFA8),
-                    onPressed: () {},
+                    onPressed: () {
+                      settingsDialog(context);
+                    },
                   ),
                 )
               ],
@@ -100,9 +105,7 @@ class ContentSpace extends StatelessWidget {
     "Settings",
   ];
 
-  final List<Widget> pageViews = [
-    ScanImagePage(),
-    GenerateQrPage()];
+  final List<Widget> pageViews = [ScanImagePage(), GenerateQrPage()];
 
   @override
   Widget build(BuildContext context) {
@@ -167,6 +170,14 @@ class ImageCard extends StatelessWidget {
   const ImageCard(this.uri);
 }
 
+class SettingsDialog extends StatelessWidget {
+  TextEditingController settingsInputPathTextController =
+      TextEditingController();
 
+  //SettingsDialog(BuildContext context, {Key? key}) : super(key: key);
 
-
+  @override
+  Widget build(BuildContext context) {
+    return Text("hi");
+  }
+}
