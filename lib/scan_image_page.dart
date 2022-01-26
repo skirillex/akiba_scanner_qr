@@ -65,10 +65,12 @@ class _ScanCardState extends State<ScanCard>
   }
 
   Future<String?> retrieveInputPathHelper() async {
-    widget.inputPathTextController.text = await getInputPath('inputPath') ?? "none";
-    widget.outputPathTextController.text = await getInputPath('outputPath') ?? "none";
-    widget.excelPathTextController.text = await getInputPath('excelPath') ?? "none";
-
+    widget.inputPathTextController.text =
+        await getInputPath('inputPath') ?? "none";
+    widget.outputPathTextController.text =
+        await getInputPath('outputPath') ?? "none";
+    widget.excelPathTextController.text =
+        await getInputPath('excelPath') ?? "none";
   }
 
   @override
@@ -186,7 +188,10 @@ class _ScanCardState extends State<ScanCard>
                       padding: const EdgeInsets.all(10.0),
                       child: FloatingActionButton.extended(
                           onPressed: () {
-                            sendData(serializeInputOutputJson(widget.inputPathTextController.text, widget.outputPathTextController.text, widget.excelPathTextController.text));
+                            sendData(serializeInputOutputJson(
+                                widget.inputPathTextController.text,
+                                widget.outputPathTextController.text,
+                                widget.excelPathTextController.text));
                           },
                           backgroundColor: const Color(0xffFCCFA8),
                           label: const Text("Scan + Process")),
@@ -200,8 +205,8 @@ class _ScanCardState extends State<ScanCard>
     );
   }
 
-  Map<String, String> serializeInputOutputJson(String input, String output, String excel) {
-
+  Map<String, String> serializeInputOutputJson(
+      String input, String output, String excel) {
     Map<String, String> buildSendData = {
       "command": "scan_and_sort",
       "inputPath": input,
@@ -215,16 +220,13 @@ class _ScanCardState extends State<ScanCard>
   }
 
   void sendData(Map<String, String> commandInputOutputMap) {
-
-
-    if (widget.inputPathTextController.text.isNotEmpty && widget.outputPathTextController.text.isNotEmpty && widget.excelPathTextController.text.isNotEmpty) {
-      widget.channel.sink.add(
-        jsonEncode(commandInputOutputMap)
-      );
+    if (widget.inputPathTextController.text.isNotEmpty &&
+        widget.outputPathTextController.text.isNotEmpty &&
+        widget.excelPathTextController.text.isNotEmpty) {
+      widget.channel.sink.add(jsonEncode(commandInputOutputMap));
 
       print("sent ${commandInputOutputMap}");
     }
-
   }
 
   @override
