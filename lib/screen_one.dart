@@ -170,14 +170,3 @@ class ImageCard extends StatelessWidget {
   const ImageCard(this.uri);
 }
 
-class SettingsDialog extends StatelessWidget {
-  TextEditingController settingsInputPathTextController =
-      TextEditingController();
-
-  //SettingsDialog(BuildContext context, {Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text("hi");
-  }
-}

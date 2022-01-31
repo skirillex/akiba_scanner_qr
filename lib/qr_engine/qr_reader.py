@@ -7,7 +7,8 @@ from shutil import copy2
 
 def add_filenames_to_excel(input_path, output_path, excel_path):
     file = openpyxl.load_workbook(excel_path)#"auction_qr_sample.xlsx")
-    current_sheet = file["AUCTION QR SAMPLE(11672)"]
+    current_sheet = file[file.sheetnames[0]]
+    #current_sheet = file["AUCTION QR SAMPLE(11672)"]
     print(current_sheet["B2"].value)
     columns_to_add = "IJKLMF"
 
@@ -43,8 +44,10 @@ def add_filenames_to_excel(input_path, output_path, excel_path):
                         column_counter += 1
                     except:
                         pass
-    # TODO add Excel output here
-    file.save('auction_qr_sample_complete.xlsx')
+    excel_output = excel_path.split(".xlsx")
+
+    # Save the processed excel file to same path of original excel file
+    file.save(f'{excel_output[0]}_complete.xlsx')
 
     return None
 

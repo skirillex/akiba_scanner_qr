@@ -3,7 +3,9 @@
 import asyncio
 import websockets
 import qr_reader
+import qr_code
 import json
+import sys
 
 
 async def echo(websocket):
@@ -23,8 +25,15 @@ async def echo(websocket):
                                  f"Output: {data['outputPath']} \n"
                                  f"Excel file: {data['excelPath']}")
 
+        if data['command'] == "generate_qr":
+            await websocket.send("Generating QR Codes")
+            qr_code.generate_qr(output_path=data['outputPath'],
+                                num_of_qr=data['numOfQr'])
+    #websocket.close()
 
-start_server = websockets.serve(echo, "0.0.0.0", 49985)  # 56095)
+
+start_server = websockets.serve(echo, "0.0.0.0", 49985, ping_interval=None)  # 56095)
+
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
