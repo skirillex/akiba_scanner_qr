@@ -26,9 +26,11 @@ class ScanCard extends StatefulWidget {
   TextEditingController inputPathTextController = TextEditingController();
   TextEditingController outputPathTextController = TextEditingController();
   TextEditingController excelPathTextController = TextEditingController();
+  //WebSocketChannel channel =
+  //WebSocketChannel.connect(Uri.parse("ws://localhost:49985"));
+  //PythonSocket()
+  //PythonSocket pySocket = PythonSocket();
 
-  WebSocketChannel channel =
-      WebSocketChannel.connect(Uri.parse("ws://localhost:49985"));
 
   ScanCard({Key? key}) : super(key: key);
 
@@ -38,7 +40,8 @@ class ScanCard extends StatefulWidget {
 
 class _ScanCardState extends State<ScanCard>
     with AutomaticKeepAliveClientMixin<ScanCard> {
-  String? inputPath;
+  WebSocketChannel channel = WebSocketChannel.connect(Uri.parse("ws://localhost:49985"));
+
 
   Map getScanPathController() {
     Map scanPathControllers = {
@@ -76,7 +79,6 @@ class _ScanCardState extends State<ScanCard>
   @override
   Widget build(BuildContext context) {
     retrieveInputPathHelper();
-    //retrieveDirPathHelper(getScanPathController());
 
     return Column(
       children: [
@@ -140,13 +142,6 @@ class _ScanCardState extends State<ScanCard>
                       padding: const EdgeInsets.fromLTRB(0, 20, 10, 0),
                       child: CupertinoButton(
                         onPressed: () async {
-                          /*
-                          inputPath = await getInputPath();
-                          setState(() {
-
-                          });
-
-                           */
                           await pickDirectory(widget.outputPathTextController);
                         },
                         child: const Text('Browse'),
@@ -188,10 +183,15 @@ class _ScanCardState extends State<ScanCard>
                       padding: const EdgeInsets.all(10.0),
                       child: FloatingActionButton.extended(
                           onPressed: () {
+
+                            setState(() {
+                              channel = WebSocketChannel.connect(Uri.parse("ws://localhost:49985"));
+                            });
+
                             sendData(serializeInputOutputJson(
                                 widget.inputPathTextController.text,
                                 widget.outputPathTextController.text,
-                                widget.excelPathTextController.text));
+                                widget.excelPathTextController.text), channel);
                           },
                           backgroundColor: const Color(0xffFCCFA8),
                           label: const Text("Scan + Process")),
@@ -200,7 +200,8 @@ class _ScanCardState extends State<ScanCard>
                 )
               ],
             )),
-        PythonSocketOutput(widget.channel)
+        PythonSocketOutput(sockChannel: channel)
+        //websockActivate ? PythonSocketOutput(sockChannel: channel) : PythonSocketOutput()
       ],
     );
   }
@@ -219,13 +220,15 @@ class _ScanCardState extends State<ScanCard>
     return buildSendData;
   }
 
-  void sendData(Map<String, String> commandInputOutputMap) {
+  void sendData(Map<String, String> commandInputOutputMap, channel) {
+
     if (widget.inputPathTextController.text.isNotEmpty &&
         widget.outputPathTextController.text.isNotEmpty &&
         widget.excelPathTextController.text.isNotEmpty) {
-      widget.channel.sink.add(jsonEncode(commandInputOutputMap));
+      channel.sink.add(jsonEncode(commandInputOutputMap));
 
       print("sent ${commandInputOutputMap}");
+
     }
   }
 
@@ -234,20 +237,20 @@ class _ScanCardState extends State<ScanCard>
 }
 
 class PythonSocketOutput extends StatefulWidget {
-  const PythonSocketOutput(this.sockChannel, {Key? key}) : super(key: key);
+  PythonSocketOutput({Key? key, required this.sockChannel}) : super(key: key);
 
-  final WebSocketChannel sockChannel;
+  WebSocketChannel sockChannel;
+  //bool showOutputStream;
 
   @override
   State<StatefulWidget> createState() => _PythonSocketOutputState();
 }
 
 class _PythonSocketOutputState extends State<PythonSocketOutput> {
-  WebSocketChannel get sockChannel => widget.sockChannel;
 
   @override
   Widget build(BuildContext context) {
-    final messages = [];
+    List messages = [];
     // ignore: prefer_const_constructors
     return Card(
         elevation: 4.0,
@@ -274,14 +277,17 @@ class _PythonSocketOutputState extends State<PythonSocketOutput> {
                               messages.add(
                                   snapshot.hasData ? '${snapshot.data}' : '');
                               return ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                scrollDirection: Axis.vertical,
                                   itemCount: messages.length,
                                   itemBuilder: (context, index) {
-                                    var message = messages[index];
+                                    //var message = messages[index];
                                     print(messages);
                                     return Text(messages[index]);
                                   });
                             },
-                          ))))),
+                          )
+                      )))),
         ));
   }
 }
