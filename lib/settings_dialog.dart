@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 TextEditingController settingsScanInputPathTextController =
@@ -17,12 +18,15 @@ TextEditingController settingsQrInputPathTextController =
 TextEditingController settingsQrOutputPathTextController =
     TextEditingController();
 
+TextEditingController portController = TextEditingController();
+
 Map pathControllers = {
   'inputPath': settingsScanInputPathTextController,
   'outputPath': settingsScanOutputPathTextController,
   'excelPath': settingsScanExcelTextController,
   'qrOutputPath': settingsQrOutputPathTextController,
-  'qrInputPath': settingsQrInputPathTextController
+  'qrInputPath': settingsQrInputPathTextController,
+  'port': portController
 };
 
 Future<String> pickDirectory(TextEditingController textController) async {
@@ -269,6 +273,32 @@ Future<void> settingsDialog(context) async {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
+                        Column(
+                          children: [
+                            const Text("Port",
+                                style: TextStyle(color: Color(0xffFCCFA8))),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+                              child: SizedBox(
+                                width: 100,
+                                child: TextFormField(
+                                  controller: portController,
+                                  inputFormatters: <TextInputFormatter>[
+                                    FilteringTextInputFormatter.digitsOnly
+                                  ],
+                                  decoration: InputDecoration(
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(25.0),
+                                      borderSide:
+                                          const BorderSide(color: Colors.grey),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                        Spacer(),
                         Padding(
                           padding: const EdgeInsets.all(10.0),
                           child: FloatingActionButton.extended(
