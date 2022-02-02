@@ -117,19 +117,6 @@ class ContentSpace extends StatelessWidget {
           context: context,
           child: ListView(
             children: <Widget>[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  IconButton(
-                    icon: Icon(Icons.search),
-                    onPressed: () {},
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.calendar_today),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
               SizedBox(
                 height: 24,
               ),
@@ -169,4 +156,3 @@ class ImageCard extends StatelessWidget {
 
   const ImageCard(this.uri);
 }
-

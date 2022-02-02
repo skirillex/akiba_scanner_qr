@@ -1,11 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:http/http.dart' as http;
 import 'package:akiba_scanner_qr/settings_dialog.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:progress_state_button/iconed_button.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:progress_state_button/progress_button.dart';
 
 class ScanImagePage extends StatelessWidget {
   const ScanImagePage({Key? key}) : super(key: key);
@@ -21,16 +26,21 @@ class ScanImagePage extends StatelessWidget {
   }
 }
 
+int portNumber = 49985;
+bool server_connected = false;
+bool apiActivation = true;
+
 // ignore: must_be_immutable
 class ScanCard extends StatefulWidget {
   TextEditingController inputPathTextController = TextEditingController();
   TextEditingController outputPathTextController = TextEditingController();
   TextEditingController excelPathTextController = TextEditingController();
+  TextEditingController portController = TextEditingController();
+
   //WebSocketChannel channel =
   //WebSocketChannel.connect(Uri.parse("ws://localhost:49985"));
   //PythonSocket()
   //PythonSocket pySocket = PythonSocket();
-
 
   ScanCard({Key? key}) : super(key: key);
 
@@ -40,17 +50,39 @@ class ScanCard extends StatefulWidget {
 
 class _ScanCardState extends State<ScanCard>
     with AutomaticKeepAliveClientMixin<ScanCard> {
-  WebSocketChannel channel = WebSocketChannel.connect(Uri.parse("ws://localhost:49985"));
-
+  WebSocketChannel channel =
+      WebSocketChannel.connect(Uri.parse("ws://localhost:$portNumber"));
 
   Map getScanPathController() {
     Map scanPathControllers = {
       'inputPath': widget.inputPathTextController,
       'outputPath': widget.outputPathTextController,
-      'excelPath': widget.excelPathTextController
+      'excelPath': widget.excelPathTextController,
+      'port': widget.portController
     };
 
     return scanPathControllers;
+  }
+
+  checkApiActivation() async {
+    var response =
+        await http.get(Uri.parse('https://akiba-api.herokuapp.com/activation'));
+
+    if (response.statusCode == 200) {
+      print("---------------------------");
+      print(response.body);
+
+      if (response.body == 'activated') {
+        print("software is activated");
+        apiActivation = true;
+      }
+      if (response.body == 'deactivated') {
+        apiActivation = false;
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /*
@@ -74,12 +106,64 @@ class _ScanCardState extends State<ScanCard>
         await getInputPath('outputPath') ?? "none";
     widget.excelPathTextController.text =
         await getInputPath('excelPath') ?? "none";
+
+    widget.portController.text = await getInputPath('port') ?? "49985";
+
+    portNumber = int.parse(widget.portController.text);
   }
+
+  startQrServer() async {
+    print("async process starting");
+
+    String mainPath = Platform.resolvedExecutable;
+    print("mainpath");
+    print(mainPath);
+    print(mainPath.lastIndexOf('/'));
+    mainPath = mainPath.substring(0, mainPath.lastIndexOf('/'));
+    mainPath = mainPath.substring(0, mainPath.lastIndexOf('/'));
+
+    print("portnumber in start server $portNumber");
+
+    Process result = await Process.start(
+      'open',
+      [
+        '$mainPath/Resources/Akiba_QR_Engine.app/',
+      ],
+      environment: {'AKIBA_PORT': '$portNumber'},
+      runInShell: true,
+    );
+
+    //Future.delayed(Duration(seconds: 5), () => sendData(commandInputOutputMap));
+
+    //await Future.delayed(Duration(seconds: 3));
+    return result;
+  }
+
+  checkConnection(channel) async {
+    Map<String, String> test_connection = {'command': 'ping'};
+    channel.sink.add(jsonEncode(test_connection));
+    print("ping!!!!");
+
+    print("checking connection");
+    print(server_connected);
+
+    if (server_connected == false) {
+      sleep(Duration(seconds: 1));
+      //await checkConnection(channel);
+    }
+
+    return true;
+  }
+
+  ButtonState stateOnlyText = ButtonState.idle;
 
   @override
   Widget build(BuildContext context) {
     retrieveInputPathHelper();
+    print(portNumber);
+    print(widget.portController.text);
 
+    checkApiActivation();
     return Column(
       children: [
         Card(
@@ -180,22 +264,60 @@ class _ScanCardState extends State<ScanCard>
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: FloatingActionButton.extended(
-                          onPressed: () {
+                        padding: const EdgeInsets.all(10.0),
+                        child: Container(
+                            width: 200,
+                            child: apiActivation
+                                ? ProgressButton.icon(
+                                    textStyle: TextStyle(color: Colors.black),
+                                    iconedButtons: {
+                                      ButtonState.idle: IconedButton(
+                                          text: "Scan + Process",
+                                          icon: Icon(
+                                            Icons.qr_code_scanner_outlined,
+                                            color: Colors.black,
+                                          ),
+                                          color: const Color(0xffFCCFA8)),
+                                      ButtonState.loading: IconedButton(
+                                          text: "Loading",
+                                          color: Colors.brown.shade300),
+                                      ButtonState.fail: IconedButton(
+                                          text: "Failed",
+                                          icon: Icon(Icons.cancel,
+                                              color: Colors.white),
+                                          color: Colors.red.shade300),
+                                      ButtonState.success: IconedButton(
+                                          text: "Success",
+                                          icon: Icon(
+                                            Icons.check_circle,
+                                            color: Colors.white,
+                                          ),
+                                          color: Colors.green.shade400)
+                                    },
+                                    onPressed: () async {
+                                      setState(() {
+                                        stateOnlyText = ButtonState.loading;
+                                      });
 
-                            setState(() {
-                              channel = WebSocketChannel.connect(Uri.parse("ws://localhost:49985"));
-                            });
+                                      await startServerSendData(
+                                        serializeInputOutputJson(
+                                            widget.inputPathTextController.text,
+                                            widget
+                                                .outputPathTextController.text,
+                                            widget
+                                                .excelPathTextController.text),
+                                      );
 
-                            sendData(serializeInputOutputJson(
-                                widget.inputPathTextController.text,
-                                widget.outputPathTextController.text,
-                                widget.excelPathTextController.text), channel);
-                          },
-                          backgroundColor: const Color(0xffFCCFA8),
-                          label: const Text("Scan + Process")),
-                    )
+                                      setState(() {
+                                        stateOnlyText = ButtonState.idle;
+                                      });
+                                    },
+                                    state: stateOnlyText,
+                                  )
+                                : FloatingActionButton.extended(
+                                    onPressed: () async {},
+                                    backgroundColor: const Color(0xffFCCFA8),
+                                    label: const Text("Scan + Process"))))
                   ],
                 )
               ],
@@ -220,16 +342,26 @@ class _ScanCardState extends State<ScanCard>
     return buildSendData;
   }
 
-  void sendData(Map<String, String> commandInputOutputMap, channel) {
+  startServerSendData(Map<String, String> commandInputOutputMap) async {
+    await startQrServer();
+    await sendData(commandInputOutputMap);
+  }
 
-    if (widget.inputPathTextController.text.isNotEmpty &&
-        widget.outputPathTextController.text.isNotEmpty &&
-        widget.excelPathTextController.text.isNotEmpty) {
-      channel.sink.add(jsonEncode(commandInputOutputMap));
+  sendData(Map<String, String> commandInputOutputMap) async {
+    await Future.delayed(Duration(seconds: 6), () async {
+      if (widget.inputPathTextController.text.isNotEmpty &&
+          widget.outputPathTextController.text.isNotEmpty &&
+          widget.excelPathTextController.text.isNotEmpty) {
+        setState(() {
+          channel =
+              WebSocketChannel.connect(Uri.parse("ws://localhost:$portNumber"));
+        });
 
-      print("sent ${commandInputOutputMap}");
+        channel.sink.add(jsonEncode(commandInputOutputMap));
 
-    }
+        print("sent ${commandInputOutputMap}");
+      }
+    });
   }
 
   @override
@@ -238,7 +370,7 @@ class _ScanCardState extends State<ScanCard>
 
 class PythonSocketOutput extends StatefulWidget {
   PythonSocketOutput({Key? key, required this.sockChannel}) : super(key: key);
-
+  late Process process;
   WebSocketChannel sockChannel;
   //bool showOutputStream;
 
@@ -247,7 +379,6 @@ class PythonSocketOutput extends StatefulWidget {
 }
 
 class _PythonSocketOutputState extends State<PythonSocketOutput> {
-
   @override
   Widget build(BuildContext context) {
     List messages = [];
@@ -276,9 +407,18 @@ class _PythonSocketOutputState extends State<PythonSocketOutput> {
                             builder: (context, snapshot) {
                               messages.add(
                                   snapshot.hasData ? '${snapshot.data}' : '');
+                              if ('${snapshot.data}'.contains("Ready")) {
+                                server_connected = true;
+                              }
+
+                              if ('${snapshot.data}'.contains(
+                                  'Scanning and processing images complete')) {
+                                server_connected = false;
+                              }
                               return ListView.builder(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                scrollDirection: Axis.vertical,
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  scrollDirection: Axis.vertical,
                                   itemCount: messages.length,
                                   itemBuilder: (context, index) {
                                     //var message = messages[index];
@@ -286,8 +426,7 @@ class _PythonSocketOutputState extends State<PythonSocketOutput> {
                                     return Text(messages[index]);
                                   });
                             },
-                          )
-                      )))),
+                          ))))),
         ));
   }
 }

@@ -1,6 +1,7 @@
 import qrcode
 from PIL import ImageDraw, ImageFont
 import random
+import sys
 
 
 
@@ -24,8 +25,10 @@ def generate_qr(output_path, num_of_qr):
         # using the make_image() function
         qr_img = obj_qr.make_image(fill_color = "black", back_color = "white").convert("RGB")
         d = ImageDraw.Draw(qr_img)
-        font = ImageFont.truetype("arial.ttf", 50)
+        font = ImageFont.truetype("/Library/Fonts/Arial Unicode.ttf", 50)
         d.text((275,650), f"{barcode_num}", font=font, fill=(0))
         # saving the QR code image
         #Sqr_img.show()
         qr_img.save(f"{output_path}/{barcode_num}.png")
+    
+    sys.exit()

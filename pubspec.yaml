@@ -37,6 +37,8 @@ dependencies:
   web_socket_channel: ^2.1.0
   shared_preferences: ^2.0.12
   file_picker: ^4.3.2
+  progress_state_button: ^1.0.4
+  http: ^0.13.4
 
 dev_dependencies:
   flutter_test:

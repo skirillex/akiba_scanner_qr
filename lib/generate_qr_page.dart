@@ -1,11 +1,14 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:akiba_scanner_qr/settings_dialog.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:progress_state_button/iconed_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:progress_state_button/progress_button.dart';
 
 class GenerateQrPage extends StatefulWidget {
   const GenerateQrPage({Key? key}) : super(key: key);
@@ -20,13 +23,14 @@ class _GenerateQrPageState extends State<GenerateQrPage> {
   }
 }
 
+int portNumber = 49985;
+
 class GenerateQrCard extends StatefulWidget {
   GenerateQrCard({Key? key}) : super(key: key);
 
   TextEditingController inputPathTextController = TextEditingController();
   TextEditingController outputPathTextController = TextEditingController();
   TextEditingController numOfQrCodesController = TextEditingController();
-
 
   @override
   _GenerateQrCardState createState() => _GenerateQrCardState();
@@ -53,12 +57,16 @@ class _GenerateQrCardState extends State<GenerateQrCard> {
         await getQrInputPath('qrInputPath') ?? "none";
     widget.outputPathTextController.text =
         await getQrInputPath('qrOutputPath') ?? "none";
+
+    portNumber = int.parse(await getQrInputPath('port') ?? "49985");
   }
 
+  ButtonState stateOnlyText = ButtonState.idle;
   @override
   Widget build(BuildContext context) {
     retrieveQrInputPathHelper();
-
+    print("generate qr page port:");
+    print(portNumber);
     return Card(
         elevation: 4.0,
         margin: const EdgeInsets.fromLTRB(0, 0, 24, 24),
@@ -80,7 +88,7 @@ class _GenerateQrCardState extends State<GenerateQrCard> {
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(25.0),
                                     borderSide:
-                                    const BorderSide(color: Colors.grey),
+                                        const BorderSide(color: Colors.grey),
                                   ),
                                 )),
                           ],
@@ -107,7 +115,7 @@ class _GenerateQrCardState extends State<GenerateQrCard> {
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(25.0),
                                     borderSide:
-                                    const BorderSide(color: Colors.grey),
+                                        const BorderSide(color: Colors.grey),
                                   ),
                                 )),
                           ],
@@ -150,28 +158,90 @@ class _GenerateQrCardState extends State<GenerateQrCard> {
                   ),
                 ),
                 //const Expanded(child: Spacer()),
-                const Spacer(
-                ),
+                const Spacer(),
                 Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: FloatingActionButton.extended(
-                      onPressed: () {
-                        sendData(serializeInputOutputJson(
-                            widget.inputPathTextController.text,
-                            widget.outputPathTextController.text,
-                            widget.numOfQrCodesController.text));
-                      },
-                      backgroundColor: const Color(0xffFCCFA8),
-                      label: const Text("Scan + Process")),
-                )
+                    padding: const EdgeInsets.all(10.0),
+                    child: Container(
+                        width: 200,
+                        child: ProgressButton.icon(
+                          textStyle: TextStyle(color: Colors.black),
+                          iconedButtons: {
+                            ButtonState.idle: IconedButton(
+                                text: "Generate QR Codes",
+                                icon: Icon(
+                                  Icons.build_rounded,
+                                  color: Colors.black,
+                                ),
+                                color: const Color(0xffFCCFA8)),
+                            ButtonState.loading: IconedButton(
+                                text: "Loading", color: Colors.brown.shade300),
+                            ButtonState.fail: IconedButton(
+                                text: "Failed",
+                                icon: Icon(Icons.cancel, color: Colors.white),
+                                color: Colors.red.shade300),
+                            ButtonState.success: IconedButton(
+                                text: "Success",
+                                icon: Icon(
+                                  Icons.check_circle,
+                                  color: Colors.white,
+                                ),
+                                color: Colors.green.shade400)
+                          },
+                          onPressed: () async {
+                            setState(() {
+                              stateOnlyText = ButtonState.loading;
+                            });
+
+                            await startServerSendData(
+                              serializeInputOutputJson(
+                                  widget.inputPathTextController.text,
+                                  widget.outputPathTextController.text,
+                                  widget.numOfQrCodesController.text),
+                            );
+
+                            setState(() {
+                              stateOnlyText = ButtonState.idle;
+                            });
+                          },
+                          state: stateOnlyText,
+                        )))
               ],
             )
           ],
         ));
   }
 
-  Map<String, String> serializeInputOutputJson(String input, String output,
-      String qrNum) {
+  startServerSendData(Map<String, String> commandInputOutputMap) async {
+    await startQrServer();
+    await sendData(commandInputOutputMap);
+  }
+
+  startQrServer() async {
+    print("async process starting");
+
+    String mainPath = Platform.resolvedExecutable;
+    print("mainpath");
+    print(mainPath);
+    print(mainPath.lastIndexOf('/'));
+    mainPath = mainPath.substring(0, mainPath.lastIndexOf('/'));
+    mainPath = mainPath.substring(0, mainPath.lastIndexOf('/'));
+
+    print("portnumber in start server $portNumber");
+
+    Process result = await Process.start(
+      'open',
+      [
+        '$mainPath/Resources/Akiba_QR_Engine.app/',
+      ],
+      environment: {'AKIBA_PORT': '$portNumber'},
+      runInShell: true,
+    );
+
+    return result;
+  }
+
+  Map<String, String> serializeInputOutputJson(
+      String input, String output, String qrNum) {
     Map<String, String> buildSendData = {
       "command": "generate_qr",
       "inputPath": input,
@@ -184,19 +254,22 @@ class _GenerateQrCardState extends State<GenerateQrCard> {
     return buildSendData;
   }
 
-  void sendData(Map<String, String> commandInputOutputMap) {
+  sendData(Map<String, String> commandInputOutputMap) async {
+    await Future.delayed(Duration(seconds: 6), () async {
+      if (widget.outputPathTextController.text.isNotEmpty &&
+          widget.numOfQrCodesController.text.isNotEmpty) {
+        //setState(() {
+        //  WebSocketChannel channel =
+        //      WebSocketChannel.connect(Uri.parse("ws://localhost:$portNumber"));
+        //});
 
-    WebSocketChannel channel =
-    WebSocketChannel.connect(Uri.parse("ws://localhost:49985"));
+        WebSocketChannel channel =
+            WebSocketChannel.connect(Uri.parse("ws://localhost:$portNumber"));
 
-    if ( //widget.inputPathTextController.text.isNotEmpty &&
-    widget.outputPathTextController.text.isNotEmpty &&
-        widget.numOfQrCodesController.text.isNotEmpty) {
-      channel.sink.add(jsonEncode(commandInputOutputMap));
+        channel.sink.add(jsonEncode(commandInputOutputMap));
 
-      print("sent ${commandInputOutputMap}");
-    }
-
-   // channel.sink.close();
+        print("sent ${commandInputOutputMap}");
+      }
+    });
   }
 }
